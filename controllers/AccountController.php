@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @link https://www.humhub.org/
  * @copyright Copyright (c) 2015 HumHub GmbH & Co. KG
@@ -8,11 +7,15 @@
 
 namespace humhub\modules\user\controllers;
 
+require_once('CiviSyncController.php');
+
 use Yii;
 use \humhub\components\Controller;
 use \yii\helpers\Url;
 use \yii\web\HttpException;
 use \humhub\modules\user\models\User;
+use \commonspace\modules\user\controllers\CiviController;
+use \humhub\modules\user\libs\Ldap;
 
 /**
  * AccountController provides all standard actions for the current logged in
@@ -49,6 +52,7 @@ class AccountController extends Controller
 
         // Get Form Definition
         $definition = $user->profile->getFormDefinition();
+
         $definition['buttons'] = array(
             'save' => array(
                 'type' => 'submit',
@@ -60,10 +64,22 @@ class AccountController extends Controller
         $form = new \humhub\compat\HForm($definition, $user->profile);
         $form->showErrorSummary = true;
         if ($form->submitted('save') && $form->validate() && $form->save()) {
-
-            // Trigger search refresh
-            $user->save();
-
+            $civi_sync_controller = new \commonspace\modules\user\controllers\CiviController(
+                CIVI_URI,
+                CIVI_SITE_KEY,
+                CIVI_USER_KEY,
+                array(
+                    'CIVI_HH_GUID_FIELD'=>CIVI_HH_GUID_FIELD,
+                    'CIVI_HH_USERNAME_FIELD'=>CIVI_HH_USERNAME_FIELD,
+                    'CIVI_HH_GENDER_FIELD'=>CIVI_HH_GENDER_FIELD
+                )
+            );
+            $civi_sync_controller->sync_profile($user);
+            
+            $ldap = Ldap::getInstance();
+            $dn = $ldap->ldap->getCanonicalAccountName($user->username, \Zend\Ldap\Ldap::ACCTNAME_FORM_DN);
+            $ldapnode = $ldap->ldap->getNode($dn);
+            $ldap->handleLdapUser($ldapnode);
             Yii::$app->getSession()->setFlash('data-saved', Yii::t('UserModule.controllers_AccountController', 'Saved'));
             return $this->redirect(Url::to(['edit']));
         }
