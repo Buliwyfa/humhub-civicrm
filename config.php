@@ -1,4 +1,5 @@
 <?php
+require_once 'civi-config.php';
 
 use humhub\modules\search\engine\Search;
 use humhub\modules\user\Events;

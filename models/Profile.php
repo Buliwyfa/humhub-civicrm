@@ -196,8 +196,10 @@ class Profile extends \yii\db\ActiveRecord
                 }
 
                 // Dont allow editing of ldap syned fields - will be overwritten on next ldap sync.
+                // daniel@common.scot edit: allow editing of LDAP synced fields. We'll sync the incoming data to the LDAP record
+                // thru our external LDAP interchange directly.
                 if ($this->user !== null && $this->user->auth_mode == User::AUTH_MODE_LDAP && $profileField->ldap_attribute != "") {
-                    $profileField->editable = false;
+                    //$profileField->editable = false;
                 }
 
                 $fieldDefinition = $profileField->fieldType->getFieldFormDefinition();

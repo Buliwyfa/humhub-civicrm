@@ -223,6 +223,7 @@ class ProfileField extends \yii\db\ActiveRecord
             $definition['ProfileField']['elements']['field_type_class']['disabled'] = true;
             $definition['ProfileField']['elements']['internal_name']['readonly'] = true;
         }
+
         return $definition;
     }
 
