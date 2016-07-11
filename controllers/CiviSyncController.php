@@ -27,9 +27,9 @@ class CiviController {
 		4) Post new contact information using contact ID 
 	*/
 	public function sync_profile($user) {
-		$contact_id = $this->get_user_id($user->guid, $this->fields['CIVI_HH_GUID_FIELD']);
+		$contact_id = $this->get_user_id($this->fields['CIVI_HH_GUID_FIELD'], $user->guid);
 		if (!$contact_id) {
-			$contact_id = $this->get_user_id($user->username, $this->fields['CIVI_HH_USERNAME_FIELD']);			
+			$contact_id = $this->get_user_id($this->fields['CIVI_HH_USERNAME_FIELD'], $user->username, );			
 		}
 		if (!$contact_id) {
 			$contact_id = $this->get_user_id_by_email($user->email);
@@ -39,25 +39,30 @@ class CiviController {
 			return;
 		}
 
-		$this->update_address($contact_id, $user->profile);
+		if ($user->profile->street || $user->profile->zip || $user->profile->city || $user->profile->state) {
+			$this->update_address($contact_id, $user->profile);			
+		}
 
-		$gender_opts = array(
-			'male'=>'Male',
-			'female'=>'Female',
-			'custom'=>'Transgender'
-		);
-		if (!$this->post_request(array(
-			'entity'=>'Contact',
-			'action'=>'create',
-			'params'=> array(
+		$params = array(
 				'id'=>$contact_id,
-				'gender_id' => $gender_opts[$user->profile->gender], // extend using $fields['CIVI_HH_GENDER_FIELD']
 				'first_name'=>$user->profile->firstname,
 				'last_name'=>$user->profile->lastname,
 				$this->fields['CIVI_HH_USERNAME_FIELD']=>$user->username,
 				$this->fields['CIVI_HH_GUID_FIELD']=>$user->guid,
 				'birth_date'=>$user->profile->birthday
-			)
+		);
+		$gender_opts = array(
+			'male'=>'Male',
+			'female'=>'Female',
+			'custom'=>'Transgender'
+		);
+		if (isset($gender_opts[$user->profile->gender])) {
+			$params['gender_id'] = $gender_opts[$user->profile->gender];
+		}
+		if (!$this->post_request(array(
+			'entity'=>'Contact',
+			'action'=>'create',
+			'params'=> $params
 		))) {
 			Yii::$app->getSession()->setFlash('error', 'Failed to update user details in CRM, please contact admin@common.scot');	
 		}
@@ -118,7 +123,7 @@ class CiviController {
 			'action'=>'create',
 			'params'=>$params
 		))) {
-			Yii::$app->getSession()->setFlash('error', 'Failed to update CRM $civi_field_data $civi_entity record, please contact admin@common.scot');	
+			Yii::$app->getSession()->setFlash('error', "Failed to update CRM $civi_field_data $civi_entity record, please contact admin@common.scot");	
 		}
 	}
 
@@ -131,6 +136,7 @@ class CiviController {
 			)
 		));
 		$params = array(
+			'contact_id'=>$contact_id,
 			'location_type_id'=>'Home',
 			'street_address'=>$user->street,
 			'postal_code'=>$user->zip,
@@ -146,7 +152,7 @@ class CiviController {
 			'action'=>'create',
 			'params'=>$params
 		))) {
-			Yii::$app->getSession()->setFlash('error', 'Failed to update CRM address field, please contact admin@common.scot');
+			Yii::$app->getSession()->setFlash('error', 'Are you sure that address is valid?');
 		};
 	}
 
@@ -155,7 +161,7 @@ class CiviController {
 			'action'=>'getsingle',
 			'entity'=>'Email',
 			'params'=>array(
-				'email'=>$email
+				'email'=>urlencode($email)
 			)
 		));
 		if (!$email_record) {
@@ -192,7 +198,7 @@ class CiviController {
 		if (isset($response->is_error) && $response->is_error) {
 			file_put_contents('civi-rest-log.txt', 
 				"Date: " . date("Y-m-d H:i:s") . 
-				"\nURI: $uri\nResult: " . json_encode($result, JSON_PRETTY_PRINT) . "\n\n", 
+				"\nURI: $uri\nResult: $result\n\n", 
 				FILE_APPEND);
 			return null;
 		}
@@ -224,7 +230,7 @@ class CiviController {
 		if (isset($response->is_error) && $response->is_error) {
 			file_put_contents('civi-rest-log.txt', 
 				"Date: " . date("Y-m-d H:i:s") . 
-				"\nURI: $uri\nResult: " . json_encode($result, JSON_PRETTY_PRINT) . "\n\n", 
+				"\nURI: " . var_export($details) . "\nResult: $result\n\n", 
 				FILE_APPEND);
 			return null;
 		}
