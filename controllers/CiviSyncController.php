@@ -29,7 +29,7 @@ class CiviController {
 	public function sync_profile($user) {
 		$contact_id = $this->get_user_id($this->fields['CIVI_HH_GUID_FIELD'], $user->guid);
 		if (!$contact_id) {
-			$contact_id = $this->get_user_id($this->fields['CIVI_HH_USERNAME_FIELD'], $user->username, );			
+			$contact_id = $this->get_user_id($this->fields['CIVI_HH_USERNAME_FIELD'], $user->username);
 		}
 		if (!$contact_id) {
 			$contact_id = $this->get_user_id_by_email($user->email);
